@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "elelem", "~> 0.11"
   spec.add_dependency "json", "~> 2.0"
+  spec.add_dependency "net-http", "~> 0.9"
 end
