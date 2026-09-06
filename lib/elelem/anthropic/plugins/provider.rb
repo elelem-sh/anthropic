@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "elelem"
-require_relative "../anthropic"
+require "elelem/plugins"
+require_relative "../../anthropic"
 
 Elelem::Providers.register(:anthropic) do
   api_key = ENV.fetch("ANTHROPIC_API_KEY")
