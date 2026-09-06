@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "elelem"
 require_relative "../anthropic"
 
 Elelem::Providers.register(:anthropic) do
