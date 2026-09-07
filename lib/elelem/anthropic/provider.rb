@@ -2,7 +2,7 @@
 
 module Elelem
   module Anthropic
-    class Client
+    class Provider
       def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10)
         @uri = URI.parse(endpoint)
         @headers_source = headers
