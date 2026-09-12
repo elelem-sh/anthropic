@@ -12,15 +12,15 @@ module Elelem
         @open_timeout = open_timeout
       end
 
-      def fetch(messages, tools = [], &block)
+      def fetch(messages, tools = [], &)
         system_prompt, normalized_messages = extract_system(messages)
         tool_calls = []
 
         stream(normalized_messages, system_prompt, tools) do |event|
-          handle_event(event, tool_calls, &block)
+          handle_event(event, tool_calls, &)
         end
 
-        finalize_tool_calls(tool_calls, &block)
+        finalize_tool_calls(tool_calls, &)
       end
 
       private
@@ -29,12 +29,12 @@ module Elelem
         @headers_source.respond_to?(:call) ? @headers_source.call : @headers_source
       end
 
-      def handle_event(event, tool_calls, &block)
+      def handle_event(event, tool_calls, &)
         case event["type"]
         when "content_block_start"
           handle_content_block_start(event, tool_calls)
         when "content_block_delta"
-          handle_content_block_delta(event, tool_calls, &block)
+          handle_content_block_delta(event, tool_calls, &)
         end
       end
 
@@ -71,7 +71,7 @@ module Elelem
         tool_calls
       end
 
-      def stream(messages, system_prompt, tools)
+      def stream(messages, system_prompt, tools, &)
         body = build_request_body(messages, system_prompt, tools)
 
         request = Net::HTTP::Post.new(@uri)
@@ -88,13 +88,13 @@ module Elelem
           conn.request(request) do |response|
             raise "HTTP #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
-            read_sse_stream(response) { |event| yield event }
+            read_sse_stream(response, &)
           end
         end
       end
 
       def build_request_body(messages, system_prompt, tools)
-        body = { max_tokens: 64000, messages:, stream: true }
+        body = { max_tokens: 64_000, messages:, stream: true }
         body[:model] = @model unless @version
         body[:anthropic_version] = @version if @version
         body[:system] = system_prompt if system_prompt
