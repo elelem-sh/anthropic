@@ -9,17 +9,17 @@ require_relative "anthropic/provider"
 require_relative "anthropic/version"
 
 Elelem.configure do |config|
-  config.provider(:anthropic) do
+  config.provider(:anthropic) do |model: nil, **|
     api_key = ENV.fetch("ANTHROPIC_API_KEY")
     Elelem::Anthropic::Provider.new(
       endpoint: "https://api.anthropic.com/v1/messages",
       headers: { "x-api-key" => api_key, "anthropic-version" => "2023-06-01" },
-      model: ENV.fetch("ANTHROPIC_MODEL", "claude-opus-4-5-20250514")
+      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-opus-4-5-20250514")
     )
   end
 
-  config.provider(:vertex) do
-    model = ENV.fetch("VERTEX_MODEL", "claude-opus-4-5@20251101")
+  config.provider(:vertex) do |model: nil, **|
+    model ||= ENV.fetch("VERTEX_MODEL", "claude-opus-4-5@20251101")
     project = ENV.fetch("GOOGLE_CLOUD_PROJECT")
     region = ENV.fetch("GOOGLE_CLOUD_REGION", "us-east5")
     Elelem::Anthropic::Provider.new(
