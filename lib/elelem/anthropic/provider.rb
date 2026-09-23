@@ -3,13 +3,14 @@
 module Elelem
   module Anthropic
     class Provider
-      def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10)
+      def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10, http: nil)
         @uri = URI.parse(endpoint)
         @headers_source = headers
         @model = model
         @version = version
         @read_timeout = read_timeout
         @open_timeout = open_timeout
+        @http = http
       end
 
       def fetch(messages, tools = [], &)
@@ -74,23 +75,15 @@ module Elelem
       def stream(messages, system_prompt, tools, &)
         body = build_request_body(messages, system_prompt, tools)
 
-        request = Net::HTTP::Post.new(@uri)
-        request["content-type"] = "application/json"
-        headers.each { |k, v| request[k] = v }
-        request.body = JSON.generate(body)
+        http.post(@uri, headers:, body:) do |response|
+          raise "HTTP #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
-        http = Net::HTTP.new(@uri.host, @uri.port)
-        http.use_ssl = @uri.scheme == "https"
-        http.read_timeout = @read_timeout
-        http.open_timeout = @open_timeout
-
-        http.start do |conn|
-          conn.request(request) do |response|
-            raise "HTTP #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
-
-            read_sse_stream(response, &)
-          end
+          read_sse_stream(response, &)
         end
+      end
+
+      def http
+        @http ||= HttpAdapter.new(read_timeout: @read_timeout, open_timeout: @open_timeout)
       end
 
       def build_request_body(messages, system_prompt, tools)
@@ -189,6 +182,29 @@ module Elelem
             description: tool.dig(:function, :description),
             input_schema: tool.dig(:function, :parameters)
           }
+        end
+      end
+
+      class HttpAdapter
+        def initialize(read_timeout:, open_timeout:)
+          @read_timeout = read_timeout
+          @open_timeout = open_timeout
+        end
+
+        def post(uri, headers:, body:, &)
+          request = Net::HTTP::Post.new(uri)
+          request["content-type"] = "application/json"
+          headers.each { |k, v| request[k] = v }
+          request.body = JSON.generate(body)
+
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = uri.scheme == "https"
+          http.read_timeout = @read_timeout
+          http.open_timeout = @open_timeout
+
+          http.start do |conn|
+            conn.request(request, &)
+          end
         end
       end
     end
