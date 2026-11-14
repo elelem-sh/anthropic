@@ -1,0 +1,10 @@
+{
+  "bootstrap-sha": "619cc74b325bbec1ff2f560dab2a8af4e81e0665",
+  "packages": {
+    ".": {
+      "release-type": "ruby",
+      "package-name": "elelem-anthropic",
+      "version-file": "lib/elelem/anthropic/version.rb"
+    }
+  }
+}
