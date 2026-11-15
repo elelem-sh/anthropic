@@ -5,6 +5,7 @@ require "json"
 require "net/http"
 require "uri"
 
+require_relative "anthropic/documents"
 require_relative "anthropic/provider"
 require_relative "anthropic/version"
 

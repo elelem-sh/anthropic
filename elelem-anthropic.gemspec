@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
     end
   end
   spec.bindir = "exe"
-  spec.executables = ["elelem-anthropic"]
+  spec.executables = %w[elelem-anthropic elelem-cxml]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "elelem", ">= 0.13", "< 1"

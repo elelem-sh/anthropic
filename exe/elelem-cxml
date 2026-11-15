@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "elelem/anthropic"
+
+paths = $stdin.tty? ? `git ls-files`.lines : $stdin.readlines
+print Elelem::Anthropic::Documents.new(paths)
