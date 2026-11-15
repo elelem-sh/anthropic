@@ -3,6 +3,7 @@
 RSpec.describe "the anthropic providers" do
   around do |example|
     saved = ENV.to_h.slice("ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "VERTEX_MODEL", "GOOGLE_CLOUD_PROJECT")
+    ENV["ANTHROPIC_MODEL"] = nil
     ENV.update("ANTHROPIC_API_KEY" => "sk-test", "GOOGLE_CLOUD_PROJECT" => "p")
     ENV.delete("ANTHROPIC_MODEL")
     ENV.delete("VERTEX_MODEL")
@@ -19,6 +20,14 @@ RSpec.describe "the anthropic providers" do
   it "defaults to claude-sonnet-5-5" do
     expect(built("anthropic").instance_variable_get(:@model)).to eq("claude-sonnet-5-5")
     expect(built("vertex").instance_variable_get(:@uri).path).to include("/models/claude-sonnet-5-5:")
+  end
+
+  it "treats an empty model as unset, and an empty key as missing" do
+    ENV["ANTHROPIC_MODEL"] = ""
+    expect(built("anthropic").instance_variable_get(:@model)).to eq("claude-sonnet-5-5")
+
+    ENV["ANTHROPIC_API_KEY"] = " "
+    expect { built("anthropic") }.to raise_error(KeyError, /ANTHROPIC_API_KEY/)
   end
 
   it "uses --model when given" do

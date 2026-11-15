@@ -8,21 +8,34 @@ require "uri"
 require_relative "anthropic/provider"
 require_relative "anthropic/version"
 
+module Elelem
+  module Anthropic
+    # An environment variable that is set but empty counts as unset.
+    def self.env(name, default = nil)
+      value = ENV[name].to_s.strip
+      return value unless value.empty?
+      return default unless default.nil?
+
+      raise KeyError, "#{name} is not set"
+    end
+  end
+end
+
 Elelem.configure do |config|
   config.provider(:anthropic) do |model: nil, **|
-    api_key = ENV.fetch("ANTHROPIC_API_KEY")
+    api_key = Elelem::Anthropic.env("ANTHROPIC_API_KEY")
     Elelem::Anthropic::Provider.new(
       endpoint: "https://api.anthropic.com/v1/messages",
       headers: { "x-api-key" => api_key, "anthropic-version" => "2023-06-01" },
-      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-sonnet-5-5"),
+      model: model || Elelem::Anthropic.env("ANTHROPIC_MODEL", "claude-sonnet-5-5"),
       **Elelem::Anthropic::Provider.options_from(ENV)
     )
   end
 
   config.provider(:vertex) do |model: nil, **|
-    model ||= ENV.fetch("VERTEX_MODEL", "claude-sonnet-5-5")
-    project = ENV.fetch("GOOGLE_CLOUD_PROJECT")
-    region = ENV.fetch("GOOGLE_CLOUD_REGION", "us-east5")
+    model ||= Elelem::Anthropic.env("VERTEX_MODEL", "claude-sonnet-5-5")
+    project = Elelem::Anthropic.env("GOOGLE_CLOUD_PROJECT")
+    region = Elelem::Anthropic.env("GOOGLE_CLOUD_REGION", "us-east5")
     Elelem::Anthropic::Provider.new(
       endpoint: "https://#{region}-aiplatform.googleapis.com/v1/projects/#{project}/locations/#{region}/publishers/anthropic/models/#{model}:streamRawPredict",
       headers: -> { { "Authorization" => "Bearer #{`gcloud auth application-default print-access-token`.strip}" } },
