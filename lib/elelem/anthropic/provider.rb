@@ -3,7 +3,28 @@
 module Elelem
   module Anthropic
     class Provider
-      def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10, http: nil)
+      THINKING = {
+        "adaptive" => { type: "adaptive" },
+        "summarized" => { type: "adaptive", display: "summarized" }
+      }.freeze
+
+      # thinking and effort are sent only when set: models before 4.6 reject
+      # adaptive thinking, and the API picks a default effort per model.
+      def self.options_from(env)
+        thinking = env["ANTHROPIC_THINKING"]
+        unless thinking.nil? || THINKING.key?(thinking)
+          raise "ANTHROPIC_THINKING must be #{THINKING.keys.join(" or ")}, not #{thinking.inspect}"
+        end
+
+        { max_tokens: Integer(env.fetch("ANTHROPIC_MAX_TOKENS", "64000")),
+          thinking: THINKING[thinking], effort: env["ANTHROPIC_EFFORT"] }
+      end
+
+      def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10, http: nil,
+                     max_tokens: 64_000, thinking: nil, effort: nil)
+        @max_tokens = max_tokens
+        @thinking = thinking
+        @effort = effort
         @uri = URI.parse(endpoint)
         @headers_source = headers
         @model = model
@@ -90,7 +111,9 @@ module Elelem
       end
 
       def build_request_body(messages, system_prompt, tools)
-        body = { max_tokens: 64_000, messages:, stream: true }
+        body = { max_tokens: @max_tokens, messages:, stream: true }
+        body[:thinking] = @thinking if @thinking
+        body[:output_config] = { effort: @effort } if @effort
         body[:model] = @model unless @version
         body[:anthropic_version] = @version if @version
         body[:system] = system_prompt if system_prompt

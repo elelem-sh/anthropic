@@ -14,7 +14,8 @@ Elelem.configure do |config|
     Elelem::Anthropic::Provider.new(
       endpoint: "https://api.anthropic.com/v1/messages",
       headers: { "x-api-key" => api_key, "anthropic-version" => "2023-06-01" },
-      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-sonnet-5-5"),
+      **Elelem::Anthropic::Provider.options_from(ENV)
     )
   end
 
@@ -26,7 +27,8 @@ Elelem.configure do |config|
       endpoint: "https://#{region}-aiplatform.googleapis.com/v1/projects/#{project}/locations/#{region}/publishers/anthropic/models/#{model}:streamRawPredict",
       headers: -> { { "Authorization" => "Bearer #{`gcloud auth application-default print-access-token`.strip}" } },
       model: model,
-      version: "vertex-2023-10-16"
+      version: "vertex-2023-10-16",
+      **Elelem::Anthropic::Provider.options_from(ENV)
     )
   end
 end

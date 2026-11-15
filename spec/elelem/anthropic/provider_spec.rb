@@ -67,6 +67,17 @@ RSpec.describe Elelem::Anthropic::Provider do
       expect(body[:messages]).to eq(messages)
     end
 
+    context "with thinking, effort and max_tokens set" do
+      let(:params) { { max_tokens: 8000, thinking: { type: "adaptive", display: "summarized" }, effort: "low" } }
+
+      it "sends them" do
+        provider.fetch(messages, [])
+
+        expect(body).to include(max_tokens: 8000, thinking: { type: "adaptive", display: "summarized" },
+                                output_config: { effort: "low" })
+      end
+    end
+
     context "with an error event mid-stream" do
       let(:events) do
         [{ "type" => "message_start" },
