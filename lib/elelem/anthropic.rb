@@ -14,12 +14,12 @@ Elelem.configure do |config|
     Elelem::Anthropic::Provider.new(
       endpoint: "https://api.anthropic.com/v1/messages",
       headers: { "x-api-key" => api_key, "anthropic-version" => "2023-06-01" },
-      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-opus-4-5-20250514")
+      model: model || ENV.fetch("ANTHROPIC_MODEL", "claude-sonnet-5-5")
     )
   end
 
   config.provider(:vertex) do |model: nil, **|
-    model ||= ENV.fetch("VERTEX_MODEL", "claude-opus-4-5@20251101")
+    model ||= ENV.fetch("VERTEX_MODEL", "claude-sonnet-5-5")
     project = ENV.fetch("GOOGLE_CLOUD_PROJECT")
     region = ENV.fetch("GOOGLE_CLOUD_REGION", "us-east5")
     Elelem::Anthropic::Provider.new(
