@@ -23,7 +23,7 @@ Elelem.configure do |config|
     project = ENV.fetch("GOOGLE_CLOUD_PROJECT")
     region = ENV.fetch("GOOGLE_CLOUD_REGION", "us-east5")
     Elelem::Anthropic::Provider.new(
-      endpoint: "https://#{region}-aiplatform.googleapis.com/v1/projects/#{project}/locations/#{region}/publishers/anthropic/models/#{model}:rawPredict",
+      endpoint: "https://#{region}-aiplatform.googleapis.com/v1/projects/#{project}/locations/#{region}/publishers/anthropic/models/#{model}:streamRawPredict",
       headers: -> { { "Authorization" => "Bearer #{`gcloud auth application-default print-access-token`.strip}" } },
       model: model,
       version: "vertex-2023-10-16"

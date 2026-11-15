@@ -24,4 +24,13 @@ RSpec.describe "the anthropic providers" do
   it "uses --model when given" do
     expect(built("anthropic", model: "claude-opus-5-5").instance_variable_get(:@model)).to eq("claude-opus-5-5")
   end
+
+  it "streams from Vertex on streamRawPredict" do
+    expect(built("vertex").instance_variable_get(:@uri).path).to end_with(":streamRawPredict")
+  end
+
+  # -p NAME requires "elelem/NAME", so elelem/vertex has to exist on the load path.
+  it "can be required as elelem/vertex" do
+    expect($LOAD_PATH.resolve_feature_path("elelem/vertex")&.last).to end_with("lib/elelem/vertex.rb")
+  end
 end
