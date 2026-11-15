@@ -36,6 +36,9 @@ module Elelem
           handle_content_block_start(event, tool_calls)
         when "content_block_delta"
           handle_content_block_delta(event, tool_calls, &)
+        when "error"
+          # e.g. overloaded_error mid-stream. Without this the reply is silently empty.
+          raise "#{event.dig("error", "type")}: #{event.dig("error", "message")}"
         end
       end
 

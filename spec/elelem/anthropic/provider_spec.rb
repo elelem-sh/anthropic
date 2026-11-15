@@ -67,6 +67,17 @@ RSpec.describe Elelem::Anthropic::Provider do
       expect(body[:messages]).to eq(messages)
     end
 
+    context "with an error event mid-stream" do
+      let(:events) do
+        [{ "type" => "message_start" },
+         { "type" => "error", "error" => { "type" => "overloaded_error", "message" => "Overloaded" } }]
+      end
+
+      it "raises instead of returning an empty reply" do
+        expect { provider.fetch(messages, []) {} }.to raise_error("overloaded_error: Overloaded")
+      end
+    end
+
     context "with text and thinking deltas" do
       let(:events) do
         [
