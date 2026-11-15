@@ -10,14 +10,21 @@ module Elelem
 
       # thinking and effort are sent only when set: models before 4.6 reject
       # adaptive thinking, and the API picks a default effort per model.
-      def self.options_from(env)
-        thinking = env["ANTHROPIC_THINKING"]
-        unless thinking.nil? || THINKING.key?(thinking)
-          raise "ANTHROPIC_THINKING must be #{THINKING.keys.join(" or ")}, not #{thinking.inspect}"
-        end
+      EFFORTS = %w[low medium high xhigh max].freeze
 
-        { max_tokens: Integer(env.fetch("ANTHROPIC_MAX_TOKENS", "64000")),
-          thinking: THINKING[thinking], effort: env["ANTHROPIC_EFFORT"] }
+      # An empty variable counts as unset.
+      def self.options_from(env)
+        value = ->(name) { env[name].to_s.strip.then { |v| v.empty? ? nil : v } }
+        thinking = choose("ANTHROPIC_THINKING", value.call("ANTHROPIC_THINKING"), THINKING.keys)
+        effort = choose("ANTHROPIC_EFFORT", value.call("ANTHROPIC_EFFORT"), EFFORTS)
+
+        { max_tokens: Integer(value.call("ANTHROPIC_MAX_TOKENS") || "64000"), thinking: THINKING[thinking], effort: }
+      end
+
+      def self.choose(name, given, allowed)
+        return given if given.nil? || allowed.include?(given)
+
+        raise "#{name} must be #{allowed.join(", ")}; not #{given.inspect}"
       end
 
       def initialize(endpoint:, headers:, model:, version: nil, read_timeout: 3600, open_timeout: 10, http: nil,

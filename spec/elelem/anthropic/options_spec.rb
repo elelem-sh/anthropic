@@ -14,6 +14,16 @@ RSpec.describe Elelem::Anthropic::Provider, ".options_from" do
 
   it "refuses an unknown thinking value" do
     expect { described_class.options_from("ANTHROPIC_THINKING" => "on") }
-      .to raise_error(/must be adaptive or summarized/)
+      .to raise_error(/must be adaptive, summarized/)
+  end
+
+  it "treats empty values as unset" do
+    env = { "ANTHROPIC_MAX_TOKENS" => "", "ANTHROPIC_THINKING" => "", "ANTHROPIC_EFFORT" => " " }
+
+    expect(described_class.options_from(env)).to eq(max_tokens: 64_000, thinking: nil, effort: nil)
+  end
+
+  it "refuses an unknown effort" do
+    expect { described_class.options_from("ANTHROPIC_EFFORT" => "extreme") }.to raise_error(/must be low, medium/)
   end
 end
