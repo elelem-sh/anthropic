@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/elelem-sh/anthropic/compare/v0.3.0...v0.3.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** accept the json that Ruby 4.0 ships ([07d2e46](https://github.com/elelem-sh/anthropic/commit/07d2e46bc8415fc5eeae9b6860be3f61b06f663f))
+
 ## [0.3.0](https://github.com/elelem-sh/anthropic/compare/v0.2.1...v0.3.0) (2026-11-15)
 
 
