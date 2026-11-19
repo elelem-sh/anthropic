@@ -12,6 +12,12 @@ module Elelem
       # adaptive thinking, and the API picks a default effort per model.
       EFFORTS = %w[low medium high xhigh max].freeze
 
+      # Each step of a turn resends the whole conversation. The marker on the
+      # system prompt caches it and the tools for every turn; the top-level
+      # marker caches the conversation so far, so each step pays only for
+      # what is new.
+      CACHE = { type: "ephemeral" }.freeze
+
       # An empty variable counts as unset.
       def self.options_from(env)
         value = ->(name) { env[name].to_s.strip.then { |v| v.empty? ? nil : v } }
@@ -64,10 +70,19 @@ module Elelem
           handle_content_block_start(event, tool_calls)
         when "content_block_delta"
           handle_content_block_delta(event, tool_calls, &)
+        when "message_start"
+          log_usage(event.dig("message", "usage"))
+        when "message_delta"
+          log_usage(event["usage"])
         when "error"
           # e.g. overloaded_error mid-stream. Without this the reply is silently empty.
           raise "#{event.dig("error", "type")}: #{event.dig("error", "message")}"
         end
+      end
+
+      # cache_read_input_tokens shows whether prompt caching works.
+      def log_usage(usage)
+        Elelem.logger.debug("anthropic: usage #{JSON.generate(usage)}") if usage
       end
 
       def handle_content_block_start(event, tool_calls)
@@ -103,53 +118,27 @@ module Elelem
         tool_calls
       end
 
-      def stream(messages, system_prompt, tools, &)
+      def stream(messages, system_prompt, tools)
         body = build_request_body(messages, system_prompt, tools)
 
         http.post(@uri, headers:, body:) do |response|
-          raise "HTTP #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
-
-          read_sse_stream(response, &)
+          Elelem::HTTP.events(response) { |data| yield JSON.parse(data) }
         end
       end
 
       def http
-        @http ||= HttpAdapter.new(read_timeout: @read_timeout, open_timeout: @open_timeout)
+        @http ||= Elelem::HTTP.new(read_timeout: @read_timeout, open_timeout: @open_timeout)
       end
 
       def build_request_body(messages, system_prompt, tools)
-        body = { max_tokens: @max_tokens, messages:, stream: true }
+        body = { max_tokens: @max_tokens, messages:, stream: true, cache_control: CACHE }
         body[:thinking] = @thinking if @thinking
         body[:output_config] = { effort: @effort } if @effort
         body[:model] = @model unless @version
         body[:anthropic_version] = @version if @version
-        body[:system] = system_prompt if system_prompt
+        body[:system] = [{ type: "text", text: system_prompt, cache_control: CACHE }] if system_prompt
         body[:tools] = unwrap_tools(tools) unless tools.empty?
         body
-      end
-
-      def read_sse_stream(response)
-        buffer = String.new
-
-        response.read_body do |chunk|
-          buffer << chunk
-
-          while (index = buffer.index("\n\n"))
-            raw_event = buffer.slice!(0, index + 2)
-            event = parse_sse(raw_event)
-            yield event if event
-          end
-        end
-      end
-
-      def parse_sse(raw)
-        line = raw.lines.find { |l| l.start_with?("data: ") }
-        return nil unless line
-
-        data = line.delete_prefix("data: ").strip
-        return nil if data == "[DONE]"
-
-        JSON.parse(data)
       end
 
       def extract_system(messages)
@@ -215,29 +204,6 @@ module Elelem
             description: tool.dig(:function, :description),
             input_schema: tool.dig(:function, :parameters)
           }
-        end
-      end
-
-      class HttpAdapter
-        def initialize(read_timeout:, open_timeout:)
-          @read_timeout = read_timeout
-          @open_timeout = open_timeout
-        end
-
-        def post(uri, headers:, body:, &)
-          request = Net::HTTP::Post.new(uri)
-          request["content-type"] = "application/json"
-          headers.each { |k, v| request[k] = v }
-          request.body = JSON.generate(body)
-
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = uri.scheme == "https"
-          http.read_timeout = @read_timeout
-          http.open_timeout = @open_timeout
-
-          http.start do |conn|
-            conn.request(request, &)
-          end
         end
       end
     end

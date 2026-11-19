@@ -42,7 +42,8 @@ RSpec.describe Elelem::Anthropic::Provider do
     it "sends model and messages by default" do
       provider.fetch(messages, [])
 
-      expect(body).to eq(max_tokens: 64_000, messages:, stream: true, model: "claude-opus-4-5-20250514")
+      expect(body).to eq(max_tokens: 64_000, messages:, stream: true, cache_control: { type: "ephemeral" },
+                         model: "claude-opus-4-5-20250514")
     end
 
     it "omits tools when empty" do
@@ -63,8 +64,25 @@ RSpec.describe Elelem::Anthropic::Provider do
     it "extracts a system message out of messages" do
       provider.fetch([{ role: "system", content: "be terse" }, *messages], [])
 
-      expect(body[:system]).to eq("be terse")
+      expect(body[:system]).to eq([{ type: "text", text: "be terse", cache_control: { type: "ephemeral" } }])
       expect(body[:messages]).to eq(messages)
+    end
+
+    it "caches the system prompt and tools, and the conversation so far" do
+      provider.fetch([{ role: "system", content: "be terse" }, *messages], [])
+
+      expect(body[:cache_control]).to eq(type: "ephemeral")
+      expect(body.dig(:system, 0, :cache_control)).to eq(type: "ephemeral")
+    end
+
+    it "reads events split by CRLF" do
+      allow(response).to receive(:read_body)
+        .and_yield(%(data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"hi"}}\r\n\r\n))
+      seen = []
+
+      provider.fetch(messages, []) { |event| seen << event }
+
+      expect(seen).to eq([{ type: "saying", text: "hi" }])
     end
 
     context "with thinking, effort and max_tokens set" do
@@ -86,6 +104,22 @@ RSpec.describe Elelem::Anthropic::Provider do
 
       it "raises instead of returning an empty reply" do
         expect { provider.fetch(messages, []) {} }.to raise_error("overloaded_error: Overloaded")
+      end
+    end
+
+    context "with usage" do
+      let(:events) do
+        [{ "type" => "message_start", "message" => { "usage" => { "cache_read_input_tokens" => 900 } } },
+         { "type" => "message_delta", "delta" => { "stop_reason" => "end_turn" }, "usage" => { "output_tokens" => 5 } }]
+      end
+
+      it "logs it, to show whether the cache is read" do
+        allow(Elelem.logger).to receive(:debug)
+
+        provider.fetch(messages, []) {}
+
+        expect(Elelem.logger).to have_received(:debug).with('anthropic: usage {"cache_read_input_tokens":900}')
+        expect(Elelem.logger).to have_received(:debug).with('anthropic: usage {"output_tokens":5}')
       end
     end
 
