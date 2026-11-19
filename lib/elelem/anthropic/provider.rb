@@ -85,6 +85,7 @@ module Elelem
       def stopped(reason)
         case reason
         when "max_tokens" then raise "the reply hit max_tokens (#{@max_tokens}); raise ANTHROPIC_MAX_TOKENS"
+        when "model_context_window_exceeded" then raise "the conversation no longer fits the model's context window"
         when "refusal" then raise "the model declined to answer"
         end
       end
@@ -145,7 +146,7 @@ module Elelem
         body[:output_config] = { effort: @effort } if @effort
         body[:model] = @model unless @version
         body[:anthropic_version] = @version if @version
-        body[:system] = [{ type: "text", text: system_prompt, cache_control: CACHE }] if system_prompt
+        body[:system] = [{ type: "text", text: system_prompt, cache_control: CACHE }] unless system_prompt.to_s.empty?
         body[:tools] = unwrap_tools(tools) unless tools.empty?
         body
       end

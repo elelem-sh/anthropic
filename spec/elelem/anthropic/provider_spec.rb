@@ -68,6 +68,12 @@ RSpec.describe Elelem::Anthropic::Provider do
       expect(body[:messages]).to eq(messages)
     end
 
+    it "leaves out an empty system prompt" do
+      provider.fetch([{ role: "system", content: "" }, *messages], [])
+
+      expect(body).not_to have_key(:system)
+    end
+
     it "caches the system prompt and tools, and the conversation so far" do
       provider.fetch([{ role: "system", content: "be terse" }, *messages], [])
 
@@ -122,6 +128,14 @@ RSpec.describe Elelem::Anthropic::Provider do
       it "says so instead of failing to parse half the arguments" do
         expect { provider.fetch(messages, []) {} }
           .to raise_error("the reply hit max_tokens (100); raise ANTHROPIC_MAX_TOKENS")
+      end
+    end
+
+    context "with a conversation too long for the model" do
+      let(:events) { [{ "type" => "message_delta", "delta" => { "stop_reason" => "model_context_window_exceeded" } }] }
+
+      it "raises" do
+        expect { provider.fetch(messages, []) {} }.to raise_error(/no longer fits the model's context window/)
       end
     end
 
