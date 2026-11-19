@@ -107,6 +107,32 @@ RSpec.describe Elelem::Anthropic::Provider do
       end
     end
 
+    context "with a tool call cut off at max_tokens" do
+      let(:params) { { max_tokens: 100 } }
+      let(:events) do
+        [
+          { "type" => "content_block_start",
+            "content_block" => { "type" => "tool_use", "id" => "1", "name" => "write" } },
+          { "type" => "content_block_delta",
+            "delta" => { "type" => "input_json_delta", "partial_json" => '{"path":"a.rb","con' } },
+          { "type" => "message_delta", "delta" => { "stop_reason" => "max_tokens" } }
+        ]
+      end
+
+      it "says so instead of failing to parse half the arguments" do
+        expect { provider.fetch(messages, []) {} }
+          .to raise_error("the reply hit max_tokens (100); raise ANTHROPIC_MAX_TOKENS")
+      end
+    end
+
+    context "with a refusal" do
+      let(:events) { [{ "type" => "message_delta", "delta" => { "stop_reason" => "refusal" } }] }
+
+      it "raises" do
+        expect { provider.fetch(messages, []) {} }.to raise_error("the model declined to answer")
+      end
+    end
+
     context "with usage" do
       let(:events) do
         [{ "type" => "message_start", "message" => { "usage" => { "cache_read_input_tokens" => 900 } } },

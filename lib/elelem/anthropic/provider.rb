@@ -74,9 +74,18 @@ module Elelem
           log_usage(event.dig("message", "usage"))
         when "message_delta"
           log_usage(event["usage"])
+          stopped(event.dig("delta", "stop_reason"))
         when "error"
           # e.g. overloaded_error mid-stream. Without this the reply is silently empty.
           raise "#{event.dig("error", "type")}: #{event.dig("error", "message")}"
+        end
+      end
+
+      # Raises before a cut-off tool call is parsed.
+      def stopped(reason)
+        case reason
+        when "max_tokens" then raise "the reply hit max_tokens (#{@max_tokens}); raise ANTHROPIC_MAX_TOKENS"
+        when "refusal" then raise "the model declined to answer"
         end
       end
 
