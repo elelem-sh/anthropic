@@ -3,9 +3,11 @@
 require "elelem"
 require "elelem/http"
 require "json"
+require "open3"
 require "uri"
 
 require_relative "anthropic/documents"
+require_relative "anthropic/gcloud_token"
 require_relative "anthropic/provider"
 require_relative "anthropic/version"
 
@@ -37,9 +39,10 @@ Elelem.configure do |config|
     model ||= Elelem::Anthropic.env("VERTEX_MODEL", "claude-sonnet-5-5")
     project = Elelem::Anthropic.env("GOOGLE_CLOUD_PROJECT")
     region = Elelem::Anthropic.env("GOOGLE_CLOUD_REGION", "us-east5")
+    token = Elelem::Anthropic::GcloudToken.new
     Elelem::Anthropic::Provider.new(
       endpoint: "https://#{region}-aiplatform.googleapis.com/v1/projects/#{project}/locations/#{region}/publishers/anthropic/models/#{model}:streamRawPredict",
-      headers: -> { { "Authorization" => "Bearer #{`gcloud auth application-default print-access-token`.strip}" } },
+      headers: -> { { "Authorization" => "Bearer #{token.call}" } },
       model: model,
       version: "vertex-2023-10-16",
       **Elelem::Anthropic::Provider.options_from(ENV)
