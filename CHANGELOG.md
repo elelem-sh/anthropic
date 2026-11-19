@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/elelem-sh/anthropic/compare/v0.3.1...v0.4.0) (2026-11-19)
+
+
+### Features
+
+* cache prompts and stream over a kept-alive connection ([a0a5c67](https://github.com/elelem-sh/anthropic/commit/a0a5c67964d61f012a697c668776d5b8d38515ee))
+
+
+### Bug Fixes
+
+* leave out an empty system prompt and say when the context window is full ([df97854](https://github.com/elelem-sh/anthropic/commit/df97854090f78afd3e2528fee7c3522e11957219))
+* say when a reply hits max_tokens or is refused ([d7f36d1](https://github.com/elelem-sh/anthropic/commit/d7f36d1b2dd731c08b8688d19ec3c9b72edbfeb5))
+
+
+### Performance Improvements
+
+* keep the gcloud token for three minutes instead of asking on every request ([bf84f19](https://github.com/elelem-sh/anthropic/commit/bf84f19e8a6139105a5734befcc754a57a817ab0))
+
 ## [0.3.1](https://github.com/elelem-sh/anthropic/compare/v0.3.0...v0.3.1) (2026-11-18)
 
 
